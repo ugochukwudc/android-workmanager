@@ -23,14 +23,13 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.appcompat.app.AppCompatActivity
-import android.util.Log
 import android.widget.Button
 import android.widget.Toast
-
-import java.util.Arrays
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import timber.log.Timber
+import java.util.*
 
 class SelectImageActivity : AppCompatActivity() {
 
@@ -135,10 +134,11 @@ class SelectImageActivity : AppCompatActivity() {
         if (resultCode == Activity.RESULT_OK) {
             when (requestCode) {
                 REQUEST_CODE_IMAGE -> data?.let { handleImageRequestResult(data) }
-                else -> Log.d(TAG, "Unknown request code.")
+                else -> Timber.d( "Unknown request code.")
             }
         } else {
-            Log.e(TAG, String.format("Unexpected Result code %s", resultCode))
+            super.onActivityResult(requestCode, resultCode, data)
+            Timber.e(String.format("Unexpected Result code %s", resultCode))
         }
     }
 
@@ -149,7 +149,7 @@ class SelectImageActivity : AppCompatActivity() {
         } ?: intent.data
 
         if (imageUri == null) {
-            Log.e(TAG, "Invalid input image Uri.")
+            Timber.e("Invalid input image Uri.")
             return
         }
 
