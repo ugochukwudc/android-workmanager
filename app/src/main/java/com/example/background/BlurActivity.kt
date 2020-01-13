@@ -81,6 +81,7 @@ class BlurActivity : AppCompatActivity() {
         cancelButton = findViewById(R.id.cancel_button)
         radioGroup = findViewById(R.id.radio_blur_group)
         goButton = go_button
+        cancel_button.setOnClickListener{ viewModel.cancelWork() }
     }
 
     /**
