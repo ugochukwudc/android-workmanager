@@ -21,6 +21,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
@@ -30,6 +31,7 @@ import androidx.work.WorkManager
 import com.example.background.workers.BlurWorker
 import com.example.background.workers.CleanUpWorker
 import com.example.background.workers.SaveImageToFileWorker
+import kotlinx.coroutines.channels.consumesAll
 
 
 class BlurViewModel(application: Application) : AndroidViewModel(application) {
@@ -72,9 +74,15 @@ class BlurViewModel(application: Application) : AndroidViewModel(application) {
                     cont.then(blurRequest.build())
                 })
             }.let { continuation ->
+                val constraints = Constraints.Builder()
+                    .setRequiresCharging(true)
+                    .setRequiresStorageNotLow(true)
+                    .build()
+
                 return@let continuation.then(
                     OneTimeWorkRequestBuilder<SaveImageToFileWorker>()
                         .addTag(TAG_OUTPUT)
+                        .setConstraints(constraints)
                         .build()
                 )
             }
