@@ -16,14 +16,20 @@
 
 package com.example.background
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
 import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.example.background.workers.BlurWorker
+import com.example.background.workers.CleanUpWorker
+import com.example.background.workers.SaveImageToFileWorker
 
 
 class BlurViewModel(application: Application) : AndroidViewModel(application) {
@@ -31,6 +37,15 @@ class BlurViewModel(application: Application) : AndroidViewModel(application) {
     internal var imageUri: Uri? = null
     internal var outputUri: Uri? = null
     private val _workManager = WorkManager.getInstance(application)
+
+    // New instance variable for the WorkInfo
+    internal val outputWorkInfos: LiveData<List<WorkInfo>>
+
+    init {
+        // This transformation makes sure that whenever the current work Id changes the WorkInfo
+        // the UI is listening to changes
+        outputWorkInfos = _workManager.getWorkInfosByTagLiveData(TAG_OUTPUT)
+    }
 
     private fun uriOrNull(uriString: String?): Uri? {
         return if (!uriString.isNullOrEmpty()) {
@@ -40,13 +55,32 @@ class BlurViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    internal fun applyBlur(blurLevel: Int){
-        _workManager.enqueue(
-            OneTimeWorkRequestBuilder<BlurWorker>()
-                .setInputData(createInputDataForUri())
-                .build()
-        )
+    @SuppressLint("EnqueueWork")
+    internal fun applyBlur(blurLevel: Int) {
+        _workManager.beginUniqueWork(
+            IMAGE_MANIPULATION_WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequest.from(CleanUpWorker::class.java))
+            .let { continuation ->
+                (0 until blurLevel).fold(continuation, { cont, index ->
+                    val blurRequest = OneTimeWorkRequestBuilder<BlurWorker>().let { builder ->
+                        if (index == 0) { // first index
+                            builder.setInputData(createInputDataForUri(blurLevel))
+                        }
+                        builder
+                    }
+                    cont.then(blurRequest.build())
+                })
+            }.let { continuation ->
+                return@let continuation.then(
+                    OneTimeWorkRequestBuilder<SaveImageToFileWorker>()
+                        .addTag(TAG_OUTPUT)
+                        .build()
+                )
+            }
+            .enqueue()
     }
+
     /**
      * Setters
      */
@@ -62,10 +96,11 @@ class BlurViewModel(application: Application) : AndroidViewModel(application) {
      * Creates the input data bundle which includes the Uri to operate on
      * @return Data which contains the Image Uri as a String
      */
-    private fun createInputDataForUri(): Data {
+    private fun createInputDataForUri(blurLevel: Int): Data {
         val builder = Data.Builder()
         imageUri?.let {
             builder.putString(KEY_IMAGE_URI, imageUri.toString())
+            builder.putInt(KEY_BLUR_LEVEL, blurLevel)
         }
         return builder.build()
     }

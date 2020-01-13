@@ -24,6 +24,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.RadioGroup
+import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
 import kotlinx.android.synthetic.main.activity_blur.*
 
@@ -52,6 +53,16 @@ class BlurActivity : AppCompatActivity() {
         viewModel.imageUri?.let { imageUri ->
             Glide.with(this).load(imageUri).into(imageView)
         }
+        viewModel.outputWorkInfos.observe(this, Observer {workInfos ->
+            workInfos.firstOrNull()?.let { saveWorkInfo ->
+                if (saveWorkInfo.state.isFinished){
+                    showWorkFinished()
+                } else {
+                    showWorkInProgress()
+                }
+            }
+
+        })
         setOnGoListener()
 
     }

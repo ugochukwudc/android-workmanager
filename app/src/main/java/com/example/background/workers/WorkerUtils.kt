@@ -100,7 +100,7 @@ fun sleep() {
  * @return Blurred bitmap image
  */
 @WorkerThread
-fun blurBitmap(bitmap: Bitmap, applicationContext: Context): Bitmap {
+fun blurBitmap(bitmap: Bitmap, applicationContext: Context, level: Int): Bitmap {
     lateinit var rsContext: RenderScript
     try {
 
@@ -114,7 +114,7 @@ fun blurBitmap(bitmap: Bitmap, applicationContext: Context): Bitmap {
         val outAlloc = Allocation.createTyped(rsContext, inAlloc.type)
         val theIntrinsic = ScriptIntrinsicBlur.create(rsContext, Element.U8_4(rsContext))
         theIntrinsic.apply {
-            setRadius(10f)
+            setRadius((level * 10f).coerceIn(10f, 25f))
             theIntrinsic.setInput(inAlloc)
             theIntrinsic.forEach(outAlloc)
         }
