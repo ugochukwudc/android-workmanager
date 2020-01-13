@@ -16,6 +16,7 @@
 
 package com.example.background
 
+import android.content.Intent
 import androidx.lifecycle.ViewModelProviders
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -53,10 +54,14 @@ class BlurActivity : AppCompatActivity() {
         viewModel.imageUri?.let { imageUri ->
             Glide.with(this).load(imageUri).into(imageView)
         }
-        viewModel.outputWorkInfos.observe(this, Observer {workInfos ->
+        viewModel.outputWorkInfos.observe(this, Observer { workInfos ->
             workInfos.firstOrNull()?.let { saveWorkInfo ->
-                if (saveWorkInfo.state.isFinished){
+                if (saveWorkInfo.state.isFinished) {
                     showWorkFinished()
+                    viewModel.setOutputUri(saveWorkInfo.outputData.getString(KEY_IMAGE_URI))
+                    viewModel.outputUri?.let {
+                        outputButton.visibility = View.VISIBLE
+                    }
                 } else {
                     showWorkInProgress()
                 }
@@ -64,6 +69,7 @@ class BlurActivity : AppCompatActivity() {
 
         })
         setOnGoListener()
+        setOnSeeOutputListener()
 
     }
 
@@ -108,6 +114,17 @@ class BlurActivity : AppCompatActivity() {
     private fun setOnGoListener(){
         goButton.setOnClickListener {
             viewModel.applyBlur(blurLevel)
+        }
+    }
+
+    private fun setOnSeeOutputListener() {
+        outputButton.setOnClickListener {
+            viewModel.outputUri?.let { outputImageUri ->
+                val viewImageIntent = Intent(Intent.ACTION_VIEW, outputImageUri)
+                viewImageIntent.resolveActivity(packageManager)?.run {
+                    startActivity(viewImageIntent)
+                }
+            }
         }
     }
 }
